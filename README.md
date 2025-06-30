@@ -78,6 +78,19 @@ when (val result = ShortioSdk.shortenUrl(apiKey, params)) {
     }
 }
 ```
+
+### 🔐 Secure Short Link
+
+If you want to encrypt the original URL, the SDK provides a `createSecure` function that uses AES-GCM encryption.
+
+```kotlin
+val originalURL = "your_original_URL"
+val result = ShortioSdk.createSecure(originalURL)
+Log.d("SecureURL", "RESULT: ${result}")
+Log.d("securedOriginalURL", "URL: ${result.securedOriginalURL}")
+Log.d("securedShortUrl", "URL: ${result.securedShortUrl}")
+```
+
 ## 🤖 Deep Linking Setup
 To handle deep links via Short.io on Android, you'll need to set up Android App Links properly using your domain's Digital Asset Links and intent filters.
 
@@ -158,20 +171,30 @@ keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -sto
 2. Override the onNewIntent() method to receive new intents when the activity is already running:
 
 ```kotlin
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+
 override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
-    val result = ShortioSdk.handleIntent(intent)
-    Log.d("New Intent", "Host: ${result?.host}, Path: ${result?.path}")
+        lifecycleScope.launch {
+            val result = ShortioSdk.handleIntent(intent)
+            Log.d("New Intent", "Host: ${result?.host}, Path: ${result?.path}")
+        }
 }
 ```
 3. In the same activity, you can also handle the initial intent inside the `onCreate()` method:
 
 ```kotlin
 // Optional
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+
 override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-        val result = ShortioSdk.handleIntent(intent)
-    Log.d("New Intent", "Host: ${result?.host}, Path: ${result?.path}")
+        lifecycleScope.launch {
+            val result = ShortioSdk.handleIntent(intent)
+            Log.d("New Intent", "Host: ${result?.host}, Path: ${result?.path}")
+        }
 }
 ```
 

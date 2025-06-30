@@ -34,6 +34,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 
 class MainActivity : ComponentActivity() {
@@ -59,6 +61,9 @@ class MainActivity : ComponentActivity() {
 
                         Spacer(modifier = Modifier.height(16.dp))
                         LinkShorteningButton(apiKey = apiKey)
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        CreateSecureUrlButton()
                     }
                 }
             }
@@ -67,8 +72,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        val response = ShortioSdk.handleIntent(intent)
-        Log.d("New Intent", "Host: ${response?.host}, Path: ${response?.path}")
+        lifecycleScope.launch {
+            val result = ShortioSdk.handleIntent(intent)
+            Log.d("New Intent", "Host: ${result?.host}, Path: ${result?.path}")
+        }
     }
 }
 
@@ -170,6 +177,85 @@ fun LinkShorteningButton(apiKey: String) {
         }
     }
 }
+
+@Composable
+fun CreateSecureUrlButton() {
+    var resultMessage by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Button(
+            onClick = {
+                isLoading = true
+                thread {
+                    try {
+                        val originalUrl = "https://{your_domain}"
+                        val result = ShortioSdk.createSecure(originalUrl)
+
+                        Log.d("SecureURL", "RESULT: $result")
+                        Log.d("SecureURL", "URL: ${result.securedOriginalURL}")
+                        Log.d("SecureURL", "KEY: ${result.securedShortUrl}")
+
+                        (context as ComponentActivity).runOnUiThread {
+                            isLoading = false
+                            resultMessage = "Secure URL: ${result.securedShortUrl}"
+                        }
+                    } catch (e: Exception) {
+                        Log.e("SecureURL", "Exception: ${e.message}", e)
+                        (context as ComponentActivity).runOnUiThread {
+                            isLoading = false
+                            resultMessage = "Error: ${e.message}"
+                        }
+                    }
+                }
+            },
+            enabled = !isLoading
+        ) {
+            Text(text = if (isLoading) "Generating..." else "Create Secure Short Link")
+        }
+
+        if (isLoading) {
+            Spacer(modifier = Modifier.height(16.dp))
+            CircularProgressIndicator()
+        }
+
+        resultMessage?.let {
+            Spacer(modifier = Modifier.height(16.dp))
+            if (it.startsWith("Error")) {
+                Text(
+                    text = it,
+                    fontSize = 16.sp,
+                    color = Color.Red,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+            } else {
+                val secureUrl = it.substringAfter("Secure URL:").trim()
+
+                Text(
+                    text = secureUrl,
+                    fontSize = 16.sp,
+                    color = Color(0xFF4CAF50),
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newPlainText("secureURL", secureUrl)
+                        clipboard.setPrimaryClip(clip)
+                        Toast.makeText(context, "Secure URL copied to clipboard", Toast.LENGTH_SHORT).show()
+                    }
+                ) {
+                    Text("Copy Secure URL")
+                }
+            }
+        }
+    }
+}
+
 
 
 @Composable
