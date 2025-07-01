@@ -183,12 +183,13 @@ fun CreateSecureUrlButton() {
     var resultMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Button(
             onClick = {
                 isLoading = true
-                thread {
+                coroutineScope.launch {
                     try {
                         val originalUrl = "https://{your_domain}"
                         val result = ShortioSdk.createSecure(originalUrl)
