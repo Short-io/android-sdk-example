@@ -74,7 +74,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         lifecycleScope.launch {
             val result = ShortioSdk.handleIntent(intent)
-            Log.d("New Intent", "Host: ${result?.host}, Path: ${result?.path}")
+            Log.d("New Intent", "Host: ${result?.host}, Path: ${result?.path}, DestinationURL: ${result?.destinationUrl}")
         }
     }
 }
