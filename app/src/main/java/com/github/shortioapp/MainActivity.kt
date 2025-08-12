@@ -35,15 +35,17 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        ShortioSdk.initialize( apiKey, domain) ////Replace with your Short.io API KEY and Domain in Constants File
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        val apiKey = "your_api_key"
 
         setContent {
             ShortIOAppTheme {
@@ -60,10 +62,13 @@ class MainActivity : ComponentActivity() {
 
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        LinkShorteningButton(apiKey = apiKey)
+                        LinkShorteningButton()
 
                         Spacer(modifier = Modifier.height(16.dp))
                         CreateSecureUrlButton()
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        trackConversionButton()
                     }
                 }
             }
@@ -80,7 +85,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun LinkShorteningButton(apiKey: String) {
+fun LinkShorteningButton() {
     var isLoading by remember { mutableStateOf(false) }
     var resultMessage by remember { mutableStateOf<String?>(null) }
     var isError by remember { mutableStateOf(false) }
@@ -95,11 +100,10 @@ fun LinkShorteningButton(apiKey: String) {
                 thread {
                     try {
                         val params = ShortIOParameters(
-                            originalURL = "https://{your_domain}",
-                            domain = "your_domain"
+                            originalURL = "https://demodeeplinkapp.short.gy/",
                         )
 
-                        when (val result = ShortioSdk.shortenUrl(apiKey, params)) {
+                        when (val result = ShortioSdk.shortenUrl(params)) {
                             is ShortIOResult.Success -> {
                                 val shortUrl = result.data.shortURL
                                 Log.d("ShortIO", "Shortened URL: $shortUrl")
@@ -257,7 +261,27 @@ fun CreateSecureUrlButton() {
     }
 }
 
+@Composable
+fun trackConversionButton() {
+    Button(
+        onClick = {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val res = ShortioSdk.trackConversion(
+                        "https://demodeeplinkapp.short.gy/",
+                        conversionId = null
+                    )
+                    Log.d("Handle Conversion Tracking", "Handle Conversion Tracking: $res")
+                } catch (e: Exception) {
+                    Log.e("Handle Conversion Tracking", "Error calling trackConversion", e)
+                }
+            }
 
+        }
+    ) {
+        Text(text = "Conversion Tracking")
+    }
+}
 
 @Composable
 fun LinkShortnerTitle() {

@@ -28,13 +28,25 @@ Open Android Studio, and open the `android-sdk-example` folder in Android Studio
 
 ## 🛠 Setup Instructions
 
-### 1. Add Your API Key
 
-Open the Main Activity file and replace the placeholder with your Short.io Public API Key:
+### Initialization
 
-```bash
-val apiKey = "your_api_key"
+To start using ShortioSdk, you need to initialize it early in your app lifecycle, preferably in your Activity's onCreate() method or in your custom Application class.
+
+Example: Initialize in Activity
+
+```kotlin
+    override fun onCreate() {
+        super.onCreate()
+        ShortioSdk.initialize(apiKey, domain) ////Replace with your Short.io API KEY and Domain in Constants File
+    }
 ```
+* apiKey: Your API key string for authenticating requests.
+* domain: The default domain to use for URL shortening.
+
+
+
+
 
 ### 🔗 Need help finding your API key?
 
@@ -46,7 +58,6 @@ In your MainActivity file replace the placeholder with your Short.io domain and 
 
 ```kotlin
 val params = ShortIOParameters(
-    domain = "your_domain", // e.g., example.short.gy
     originalURL = "https://{your_domain}" // The destination URL
 )
 ``` 
@@ -63,7 +74,6 @@ Using your domain and original URL, you can generate a short link like this:
 val apiKey = "your_api_key"
 
 val params = ShortIOParameters(
-    domain = "your_domain", // e.g., example.short.gy
     originalURL = "https://{your_domain}" // The destination URL
 )
 
