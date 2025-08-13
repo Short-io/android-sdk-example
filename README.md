@@ -36,12 +36,12 @@ To start using ShortioSdk, you need to initialize it early in your app lifecycle
 Example: Initialize in Activity
 
 ```kotlin
-    override fun onCreate() {
-        super.onCreate()
-        ShortioSdk.initialize(apiKey, domain) ////Replace with your Short.io API KEY and Domain in Constants File
-    }
+override fun onCreate() {
+    super.onCreate()
+    ShortioSdk.initialize(apiKey, domain) ////Replace with your Short.io API KEY and Domain in Constants File
+}
 ```
-* apiKey: Your API key string for authenticating requests.
+* apiKey: Your API key string for initialization.
 * domain: The default domain to use for URL shortening.
 
 
@@ -71,13 +71,12 @@ The app demonstrates:
 Using your domain and original URL, you can generate a short link like this:
 
 ```kotlin
-val apiKey = "your_api_key"
 
 val params = ShortIOParameters(
     originalURL = "https://{your_domain}" // The destination URL
 )
 
-when (val result = ShortioSdk.shortenUrl(apiKey, params)) {
+when (val result = ShortioSdk.shortenUrl(params)) {
     is ShortIOResult.Success -> {
         val shortUrl = result.data.shortURL
         Log.d("ShortIO", "Shortened URL: $shortUrl")
@@ -88,6 +87,7 @@ when (val result = ShortioSdk.shortenUrl(apiKey, params)) {
     }
 }
 ```
+**Note**: Only the `originalURL` is the required parameter as `domain` is passed in the initialize method of SDK. You can also pass optional parameters such as `path`, `title`, `utmParameters`, etc.
 
 ### 🔐 Secure Short Link
 
@@ -99,6 +99,23 @@ val result = ShortioSdk.createSecure(originalURL)
 Log.d("SecureURL", "RESULT: ${result}")
 Log.d("securedOriginalURL", "URL: ${result.securedOriginalURL}")
 Log.d("securedShortUrl", "URL: ${result.securedShortUrl}")
+```
+
+### 🔄 Conversion Tracking
+
+Track conversions for your short links to measure campaign effectiveness. The SDK provides a simple method to record conversions.
+
+```kotlin
+CoroutineScope(Dispatchers.IO).launch {
+    try {
+        val res = ShortioSdk.trackConversion()
+        // You can pass originalUrl, clid and conversionId as parameters to trackConversion()
+        // conversionId can be 'signup', 'purchase', 'download', etc.
+        Log.d("Handle Conversion Tracking", "Handle Conversion Tracking: $res")
+    } catch (e: Exception) {
+        Log.e("Handle Conversion Tracking", "Error calling trackConversion", e)
+    }
+}
 ```
 
 ## 🤖 Deep Linking Setup

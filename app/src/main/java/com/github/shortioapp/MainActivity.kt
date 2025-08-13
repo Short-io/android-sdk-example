@@ -43,8 +43,8 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        ShortioSdk.initialize( apiKey, domain) ////Replace with your Short.io API KEY and Domain in Constants File
         super.onCreate(savedInstanceState)
+        ShortioSdk.initialize( apiKey, domain) //Replace with your Short.io API KEY and Domain in Constants File
         enableEdgeToEdge()
 
         setContent {
@@ -68,7 +68,7 @@ class MainActivity : ComponentActivity() {
                         CreateSecureUrlButton()
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        trackConversionButton()
+                        TrackConversionButton()
                     }
                 }
             }
@@ -100,7 +100,7 @@ fun LinkShorteningButton() {
                 thread {
                     try {
                         val params = ShortIOParameters(
-                            originalURL = "https://demodeeplinkapp.short.gy/",
+                            originalURL = "https://{YOUR_DOMAIN}/",
                         )
 
                         when (val result = ShortioSdk.shortenUrl(params)) {
@@ -262,24 +262,44 @@ fun CreateSecureUrlButton() {
 }
 
 @Composable
-fun trackConversionButton() {
-    Button(
-        onClick = {
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    val res = ShortioSdk.trackConversion(
-                        "https://demodeeplinkapp.short.gy/",
-                        conversionId = null
-                    )
-                    Log.d("Handle Conversion Tracking", "Handle Conversion Tracking: $res")
-                } catch (e: Exception) {
-                    Log.e("Handle Conversion Tracking", "Error calling trackConversion", e)
+fun TrackConversionButton() {
+    var conversionResult by remember { mutableStateOf<Boolean?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Button(
+            onClick = {
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val res = ShortioSdk.trackConversion()
+                        // You can pass originalUrl, clid and conversionId as parameters to trackConversion()
+                        conversionResult = res
+                        errorMessage = null
+                    } catch (e: Exception) {
+                        conversionResult = null
+                        errorMessage = e.message
+                        Log.e("Handle Conversion Tracking", "Error calling trackConversion", e)
+                    }
                 }
             }
-
+        ) {
+            Text(text = "Conversion Tracking")
         }
-    ) {
-        Text(text = "Conversion Tracking")
+        conversionResult?.let { success ->
+            Text(
+                text = if (success) "Conversion successful" else "Conversion failed",
+                color = if (success) Color.Green else Color.Red
+            )
+        }
+        errorMessage?.let {
+            Text(
+                text = it,
+                color = Color.Red
+            )
+        }
     }
 }
 
