@@ -274,8 +274,8 @@ fun TrackConversionButton() {
             onClick = {
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
-                        val res = ShortioSdk.trackConversion()
-                        // You can pass originalUrl, clid and conversionId as parameters to trackConversion()
+                        val res = ShortioSdk.trackConversion("Your_OriginalUrl", "CLID", "conversionId")
+                        // You can pass originalUrl, clid and conversionId as parameters to trackConversion(). These are Optional Parameters
                         conversionResult = res
                         errorMessage = null
                     } catch (e: Exception) {
@@ -291,7 +291,7 @@ fun TrackConversionButton() {
         conversionResult?.let { success ->
             Text(
                 text = if (success) "Conversion successful" else "Conversion failed",
-                color = if (success) Color.Green else Color.Red
+                color = if (success) Color(0xFF4CAF50) else Color.Red
             )
         }
         errorMessage?.let {
