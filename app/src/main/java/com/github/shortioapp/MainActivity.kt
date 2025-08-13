@@ -274,7 +274,7 @@ fun TrackConversionButton() {
             onClick = {
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
-                        val res = ShortioSdk.trackConversion("Your_OriginalUrl", "CLID", "conversionId")
+                        val res = ShortioSdk.trackConversion("your_originalUrl", "your_clid", "your_conversionId")
                         // You can pass originalUrl, clid and conversionId as parameters to trackConversion(). These are Optional Parameters
                         conversionResult = res
                         errorMessage = null
