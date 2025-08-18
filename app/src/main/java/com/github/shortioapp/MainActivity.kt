@@ -103,7 +103,7 @@ fun LinkShorteningButton() {
                             originalURL = "https://{YOUR_DOMAIN}/",
                         )
 
-                        when (val result = ShortioSdk.shortenUrl(params)) {
+                        when (val result = ShortioSdk.createShortLink(params)) {
                             is ShortIOResult.Success -> {
                                 val shortUrl = result.data.shortURL
                                 Log.d("ShortIO", "Shortened URL: $shortUrl")
@@ -274,8 +274,11 @@ fun TrackConversionButton() {
             onClick = {
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
-                        val res = ShortioSdk.trackConversion("your_originalUrl", "your_clid", "your_conversionId")
-                        // You can pass originalUrl, clid and conversionId as parameters to trackConversion(). These are Optional Parameters
+                        val res = ShortioSdk.trackConversion(
+                        "your_clid", // ⚠️ Deprecated (optional)
+                    "your_domain", // ⚠️ Deprecated (optional)
+                        "your_conversionID" //(optional)
+                        )
                         conversionResult = res
                         errorMessage = null
                     } catch (e: Exception) {

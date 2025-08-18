@@ -29,7 +29,7 @@ Open Android Studio, and open the `android-sdk-example` folder in Android Studio
 ## 🛠 Setup Instructions
 
 
-### Initialization
+### Initialize the SDK
 
 To start using ShortioSdk, you need to initialize it early in your app lifecycle, preferably in your Activity's onCreate() method or in your custom Application class.
 
@@ -76,7 +76,7 @@ val params = ShortIOParameters(
     originalURL = "https://{your_domain}" // The destination URL
 )
 
-when (val result = ShortioSdk.shortenUrl(params)) {
+when (val result = ShortioSdk.createShortLink(params)) {
     is ShortIOResult.Success -> {
         val shortUrl = result.data.shortURL
         Log.d("ShortIO", "Shortened URL: $shortUrl")
@@ -108,8 +108,11 @@ Track conversions for your short links to measure campaign effectiveness. The SD
 ```kotlin
 CoroutineScope(Dispatchers.IO).launch {
     try {
-        val res = ShortioSdk.trackConversion()
-        // You can pass originalUrl, clid and conversionId as parameters to trackConversion()
+        val res = ShortioSdk.trackConversion(
+            domain: "https://{your_domain}", // ⚠️ Deprecated (optional):
+            clid: "your_clid", // ⚠️ Deprecated (optional):
+            conversionId: "your_conversionID" // (optional)
+        )
         // conversionId can be 'signup', 'purchase', 'download', etc.
         Log.d("Handle Conversion Tracking", "Handle Conversion Tracking: $res")
     } catch (e: Exception) {
@@ -205,7 +208,7 @@ override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
         lifecycleScope.launch {
             val result = ShortioSdk.handleIntent(intent)
-            Log.d("New Intent", "Host: ${result?.host}, Path: ${result?.path}")
+                    Log.d("New Intent", "Host: ${result?.host}, Path: ${result?.path}, DestinationURL: ${result?.destinationUrl}")
         }
 }
 ```
@@ -220,7 +223,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
         lifecycleScope.launch {
             val result = ShortioSdk.handleIntent(intent)
-            Log.d("New Intent", "Host: ${result?.host}, Path: ${result?.path}")
+                    Log.d("New Intent", "Host: ${result?.host}, Path: ${result?.path}, DestinationURL: ${result?.destinationUrl}")
         }
 }
 ```
