@@ -72,3 +72,14 @@ jobs:
             app/build/reports/
             app/build/test-results/
           retention-days: 7
+
+  # The ruleset requires a check named `test`; the job above reports as `build`.
+  # always() so a failed build still reports this check.
+  test:
+    name: test
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: '[ "${{ needs.build.result }}" = "success" ]'
