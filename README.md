@@ -1,6 +1,8 @@
 
 # 📱 ShortIOApp – Android Sample Project for ShortIOSDK
 
+[![CI](https://github.com/Short-io/android-sdk-example/actions/workflows/ci.yml/badge.svg)](https://github.com/Short-io/android-sdk-example/actions/workflows/ci.yml)
+
 **ShortIOApp** is a sample Android project that demonstrates how to integrate and use the [ShortIOSDK](https://github.com/Short-io/android-sdk.git) for generating short links and handling deep links using [Short.io](https://short.io/).
 
 This project helps developers understand how to:
