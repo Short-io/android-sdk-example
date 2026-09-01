@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main, short-io-app]
+
+# Least privilege: nothing here needs more than reading the checkout.
+permissions:
+  contents: read
+
+# Cancel superseded PR runs; branch pushes finish so the badge never shows a cancellation.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  JAVA_VERSION: "17"
+
+jobs:
+  # Compose tests run under Robolectric; they never click the two buttons that
+  # would call the live Short.io API.
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    # Otherwise a wedged daemon runs to the 360-minute default.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: gradle/actions/setup-gradle@ac638b010cf58a27ee6c972d7336334ccaf61c96 # v4.4.1
+
+      # Split out so a JitPack outage reads as a dependency failure, not a compile failure.
+      # Robolectric caches android-all jars outside ~/.gradle, so they need their own key.
+      - name: Cache Robolectric runtimes
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-${{ runner.os }}-${{ hashFiles('**/gradle/libs.versions.toml', '**/src/test/resources/robolectric.properties') }}
+          restore-keys: robolectric-${{ runner.os }}-
+
+      - name: Resolve dependencies
+        run: ./gradlew --no-daemon :app:dependencies --configuration debugRuntimeClasspath
+
+      - name: Assemble
+        run: ./gradlew --no-daemon assembleDebug
+
+      - name: Unit tests
+        run: ./gradlew --no-daemon testDebugUnitTest
+
+      # Type-checks androidTest without an emulator.
+      - name: Compile instrumented tests
+        run: ./gradlew --no-daemon assembleAndroidTest
+
+      # Lint is not run: android:host="{your_domain}" is an intentional placeholder
+      # that lint reports as an AppLinkUrlError.
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: build-reports
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          retention-days: 7
+
+  # The ruleset requires a check named `test`; the job above reports as `build`.
+  # always() so a failed build still reports this check.
+  test:
+    name: test
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: '[ "${{ needs.build.result }}" = "success" ]'

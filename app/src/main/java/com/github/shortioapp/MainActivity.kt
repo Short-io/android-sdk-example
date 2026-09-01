@@ -34,14 +34,18 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ShortioSdk.initialize( apiKey, domain) //Replace with your Short.io API KEY and Domain in Constants File
         enableEdgeToEdge()
-
-        val apiKey = "your_api_key"
 
         setContent {
             ShortIOAppTheme {
@@ -58,7 +62,13 @@ class MainActivity : ComponentActivity() {
 
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        LinkShorteningButton(apiKey = apiKey)
+                        LinkShorteningButton()
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        CreateSecureUrlButton()
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        TrackConversionButton()
                     }
                 }
             }
@@ -67,13 +77,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        val response = ShortioSdk.handleIntent(intent)
-        Log.d("New Intent", "Host: ${response?.host}, Path: ${response?.path}")
+        lifecycleScope.launch {
+            val result = ShortioSdk.handleIntent(intent)
+            Log.d("New Intent", "Host: ${result?.host}, Path: ${result?.path}, DestinationURL: ${result?.destinationUrl}")
+        }
     }
 }
 
 @Composable
-fun LinkShorteningButton(apiKey: String) {
+fun LinkShorteningButton() {
     var isLoading by remember { mutableStateOf(false) }
     var resultMessage by remember { mutableStateOf<String?>(null) }
     var isError by remember { mutableStateOf(false) }
@@ -88,11 +100,10 @@ fun LinkShorteningButton(apiKey: String) {
                 thread {
                     try {
                         val params = ShortIOParameters(
-                            originalURL = "https://{your_domain}",
-                            domain = "your_domain"
+                            originalURL = "https://{YOUR_DOMAIN}/",
                         )
 
-                        when (val result = ShortioSdk.shortenUrl(apiKey, params)) {
+                        when (val result = ShortioSdk.createShortLink(params)) {
                             is ShortIOResult.Success -> {
                                 val shortUrl = result.data.shortURL
                                 Log.d("ShortIO", "Shortened URL: $shortUrl")
@@ -171,6 +182,140 @@ fun LinkShorteningButton(apiKey: String) {
     }
 }
 
+@Composable
+fun CreateSecureUrlButton() {
+    var resultMessage by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Button(
+            onClick = {
+                isLoading = true
+                resultMessage = null
+                thread {
+                    try {
+                        val originalUrl = "https://{your_domain}"
+                        val secure = ShortioSdk.createSecure(originalUrl)
+
+                        // The ciphertext is what gets shortened; the key never reaches the server.
+                        val params = ShortIOParameters(originalURL = secure.securedOriginalURL)
+                        when (val result = ShortioSdk.createShortLink(params)) {
+                            is ShortIOResult.Success -> {
+                                // securedShortUrl is the "#<key>" fragment the browser decrypts with.
+                                val secureUrl = result.data.shortURL + secure.securedShortUrl
+                                (context as ComponentActivity).runOnUiThread {
+                                    isLoading = false
+                                    resultMessage = "Secure URL: $secureUrl"
+                                }
+                            }
+                            is ShortIOResult.Error -> {
+                                Log.e("SecureURL", "Error: ${result.data.message}")
+                                (context as ComponentActivity).runOnUiThread {
+                                    isLoading = false
+                                    resultMessage = "Error: ${result.data.message}"
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("SecureURL", "Exception: ${e.message}", e)
+                        (context as ComponentActivity).runOnUiThread {
+                            isLoading = false
+                            resultMessage = "Error: ${e.message}"
+                        }
+                    }
+                }
+            },
+            enabled = !isLoading
+        ) {
+            Text(text = if (isLoading) "Generating..." else "Create Secure Short Link")
+        }
+
+        if (isLoading) {
+            Spacer(modifier = Modifier.height(16.dp))
+            CircularProgressIndicator()
+        }
+
+        resultMessage?.let {
+            Spacer(modifier = Modifier.height(16.dp))
+            if (it.startsWith("Error")) {
+                Text(
+                    text = it,
+                    fontSize = 16.sp,
+                    color = Color.Red,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+            } else {
+                val secureUrl = it.substringAfter("Secure URL:").trim()
+
+                Text(
+                    text = secureUrl,
+                    fontSize = 16.sp,
+                    color = Color(0xFF4CAF50),
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newPlainText("secureURL", secureUrl)
+                        clipboard.setPrimaryClip(clip)
+                        Toast.makeText(context, "Secure URL copied to clipboard", Toast.LENGTH_SHORT).show()
+                    }
+                ) {
+                    Text("Copy Secure URL")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TrackConversionButton() {
+    var conversionResult by remember { mutableStateOf<Boolean?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Button(
+            onClick = {
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val res = ShortioSdk.trackConversion(
+                        "your_clid", // ⚠️ Deprecated (optional)
+                    "your_domain", // ⚠️ Deprecated (optional)
+                        "your_conversionID" //(optional)
+                        )
+                        conversionResult = res
+                        errorMessage = null
+                    } catch (e: Exception) {
+                        conversionResult = null
+                        errorMessage = e.message
+                        Log.e("Handle Conversion Tracking", "Error calling trackConversion", e)
+                    }
+                }
+            }
+        ) {
+            Text(text = "Conversion Tracking")
+        }
+        conversionResult?.let { success ->
+            Text(
+                text = if (success) "Conversion successful" else "Conversion failed",
+                color = if (success) Color(0xFF4CAF50) else Color.Red
+            )
+        }
+        errorMessage?.let {
+            Text(
+                text = it,
+                color = Color.Red
+            )
+        }
+    }
+}
 
 @Composable
 fun LinkShortnerTitle() {
