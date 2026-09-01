@@ -187,24 +187,35 @@ fun CreateSecureUrlButton() {
     var resultMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Button(
             onClick = {
                 isLoading = true
-                coroutineScope.launch {
+                resultMessage = null
+                thread {
                     try {
                         val originalUrl = "https://{your_domain}"
-                        val result = ShortioSdk.createSecure(originalUrl)
+                        val secure = ShortioSdk.createSecure(originalUrl)
 
-                        Log.d("SecureURL", "RESULT: $result")
-                        Log.d("SecureURL", "URL: ${result.securedOriginalURL}")
-                        Log.d("SecureURL", "KEY: ${result.securedShortUrl}")
-
-                        (context as ComponentActivity).runOnUiThread {
-                            isLoading = false
-                            resultMessage = "Secure URL: ${result.securedShortUrl}"
+                        // The ciphertext is what gets shortened; the key never reaches the server.
+                        val params = ShortIOParameters(originalURL = secure.securedOriginalURL)
+                        when (val result = ShortioSdk.createShortLink(params)) {
+                            is ShortIOResult.Success -> {
+                                // securedShortUrl is the "#<key>" fragment the browser decrypts with.
+                                val secureUrl = result.data.shortURL + secure.securedShortUrl
+                                (context as ComponentActivity).runOnUiThread {
+                                    isLoading = false
+                                    resultMessage = "Secure URL: $secureUrl"
+                                }
+                            }
+                            is ShortIOResult.Error -> {
+                                Log.e("SecureURL", "Error: ${result.data.message}")
+                                (context as ComponentActivity).runOnUiThread {
+                                    isLoading = false
+                                    resultMessage = "Error: ${result.data.message}"
+                                }
+                            }
                         }
                     } catch (e: Exception) {
                         Log.e("SecureURL", "Exception: ${e.message}", e)
